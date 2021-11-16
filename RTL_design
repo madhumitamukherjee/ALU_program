@@ -1,0 +1,32 @@
+//////////////////////RTL Design///////////////////////
+module au
+(
+  input [2:0] sel,
+  input [15:0] a,b,
+  output reg [15:0] y
+);
+  
+  always@(*)
+    begin
+      case(sel)
+        3'b000: y = 8'h00;
+        3'b001: y = a & b;
+        3'b010: y = a | b;
+        3'b011: y = a ^ b;
+        3'b100: y = ~ a;
+        3'b101: y = a - b;
+        3'b110: y = a + b;
+        3'b111: y = 8'hFF;
+      endcase
+    end
+endmodule  
+
+/////////Interface///////////////////////////////////////
+
+interface au_if();
+  logic [2:0] sel;
+  logic [15:0] a;
+  logic [15:0] b;
+  logic [15:0] y;
+  
+endinterface
