@@ -1,0 +1,98 @@
+////////////////////////////////Agent//////////////////////////////
+
+class agent extends uvm_agent;
+`uvm_component_utils(agent)
+ 
+ 
+function new(input string inst = "AGENT", uvm_component c);
+super.new(inst, c);
+endfunction
+ 
+monitor m;
+driver d;
+uvm_sequencer #(transaction) seq;
+ 
+ 
+virtual function void build_phase(uvm_phase phase);
+super.build_phase(phase);
+m = monitor::type_id::create("MON",this);
+d = driver::type_id::create("DRV",this);
+seq = uvm_sequencer #(transaction)::type_id::create("SEQ",this);
+endfunction
+ 
+ 
+virtual function void connect_phase(uvm_phase phase);
+super.connect_phase(phase);
+d.seq_item_port.connect(seq.seq_item_export);
+endfunction
+endclass
+ 
+//////////////////////////////////////ENV////////////////////////
+ 
+class env extends uvm_env;
+`uvm_component_utils(env)
+ 
+ 
+function new(input string inst = "ENV", uvm_component c);
+super.new(inst, c);
+endfunction
+ 
+scoreboard s;
+agent a;
+ 
+virtual function void build_phase(uvm_phase phase);
+super.build_phase(phase);
+s = scoreboard::type_id::create("SCO",this);
+a = agent::type_id::create("AGENT",this);
+endfunction
+ 
+ 
+virtual function void connect_phase(uvm_phase phase);
+super.connect_phase(phase);
+a.m.send.connect(s.recv);
+endfunction
+ 
+endclass
+ 
+/////////////////////////////////Test//////////////////////////////
+ 
+class test extends uvm_test;
+`uvm_component_utils(test)
+ 
+ 
+function new(input string inst = "TEST", uvm_component c);
+super.new(inst, c);
+endfunction
+ 
+generator gen;
+env e;
+ 
+virtual function void build_phase(uvm_phase phase);
+super.build_phase(phase);
+gen = generator::type_id::create("GEN",this);
+e = env::type_id::create("ENV",this);
+endfunction
+ 
+virtual task run_phase(uvm_phase phase);
+  phase.raise_objection(this);
+gen.start(e.a.seq);
+#10;
+  phase.drop_objection(this);
+endtask
+endclass
+///////////////////////////TOP Level/////////////////////////////
+module au_tb();
+test t;
+au_if aif();
+ 
+au dut (.sel(aif.sel), .a(aif.a), .b(aif.b), .y(aif.y));
+ 
+initial begin
+$dumpfile("dump.vcd");   ////////////////////dumpfile for Waveform analysis////////////// 
+$dumpvars;   
+t = new("TEST",null);
+uvm_config_db #(virtual au_if)::set(null, "*", "aif", aif);
+run_test();
+end
+ 
+endmodule 
