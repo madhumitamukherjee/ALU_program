@@ -1,0 +1,81 @@
+`include "uvm_macros.svh"
+import uvm_pkg::*;
+
+///////////////////////////////transaction/////////////////////////
+
+class transaction extends uvm_sequence_item;
+rand bit [2:0] sel;
+rand bit [15:0] a;
+rand bit [15:0] b;
+bit [15:0] y;
+ 
+function new(input string inst = "TRANS");
+super.new(inst);
+endfunction
+ 
+`uvm_object_utils_begin(transaction)
+`uvm_field_int(sel, UVM_DEFAULT)
+`uvm_field_int(a, UVM_DEFAULT)
+`uvm_field_int(b, UVM_DEFAULT)
+`uvm_field_int(y, UVM_DEFAULT)
+`uvm_object_utils_end
+ 
+endclass
+//////////////////////////generator////////////////////////////////
+
+class generator extends uvm_sequence #(transaction);
+`uvm_object_utils(generator)
+ 
+transaction t;
+integer i;
+ 
+function new(input string inst = "GEN");
+super.new(inst);
+endfunction
+ 
+ 
+virtual task body();
+t = transaction::type_id::create("TRANS");
+for(i =0; i< 5; i++) begin
+start_item(t);
+t.randomize();
+`uvm_info("GEN",$sformatf("Data send to Driver sel: %d, a :%0d , b :%0d",t.sel,t.a,t.b), UVM_NONE);
+t.print(uvm_default_line_printer);
+finish_item(t);
+#10;  
+end
+endtask
+endclass
+
+/////////////////////////Driver////////////////////////////////////
+
+class driver extends uvm_driver #(transaction);
+`uvm_component_utils(driver)
+ 
+function new(input string inst = " DRV", uvm_component c);
+super.new(inst, c);
+endfunction
+ 
+transaction data;
+virtual au_if aif;
+ 
+ 
+virtual function void build_phase(uvm_phase phase);
+super.build_phase(phase);
+data = transaction::type_id::create("TRANS");
+if(!uvm_config_db #(virtual au_if)::get(this,"","aif",aif)) 
+`uvm_info("DRV","Unable to access uvm_config_db",UVM_NONE);
+endfunction
+ 
+virtual task run_phase(uvm_phase phase);
+forever begin
+seq_item_port.get_next_item(data);
+aif.a = data.a;
+aif.b = data.b;
+aif.sel = data.sel;
+`uvm_info("DRV", $sformatf("Trigger DUT mode: %0d, a: %0d ,b :  %0d",data.sel, data.a, data.b), UVM_NONE);
+data.print(uvm_default_line_printer);
+seq_item_port.item_done();
+end
+endtask
+endclass
